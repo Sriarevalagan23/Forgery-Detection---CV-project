@@ -8,4 +8,4 @@ keras==2.13.1
 gdown==5.1.0
 Pillow==10.3.0
 h5py==3.10.0
-
+streamlit
