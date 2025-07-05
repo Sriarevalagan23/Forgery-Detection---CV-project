@@ -6,9 +6,27 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 
+import os
+import gdown
+
+
+
 app = Flask(__name__)
+
+def download_model():
+    model_path = "models/cnn_model.h5"
+    if not os.path.exists(model_path):
+        os.makedirs("models", exist_ok=True)
+        file_id = "1aJ6m3IJ22L9a-Faawok3C-1AbhU4-AmW"  # Your Google Drive file ID
+        url = f"https://drive.google.com/uc?id={file_id}"
+        print("Downloading model from Google Drive...")
+        gdown.download(url, model_path, quiet=False)
+    return model_path
+    
+model_path = download_model()
+model = load_model("models/cnn_model.h5")
 app.config['UPLOAD_FOLDER'] = 'uploads'
-model = load_model('/Users/srinidhi/Desktop/forgery_detection/forgery_cnn_model.h5')
+
 
 def preprocess_image(path):
     img = load_img(path, target_size=(128, 128))
