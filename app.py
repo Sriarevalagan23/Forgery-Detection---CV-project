@@ -1,57 +1,54 @@
-from flask import Flask, render_template, request
-from random import random
-import os
+import streamlit as st
 import numpy as np
+import os
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array, load_img
-
-import os
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import gdown
+from PIL import Image
 
-
-
-app = Flask(__name__)
-
+# Download model if not present
 def download_model():
     model_path = "models/cnn_model.h5"
     if not os.path.exists(model_path):
         os.makedirs("models", exist_ok=True)
         file_id = "1aJ6m3IJ22L9a-Faawok3C-1AbhU4-AmW"  # Your Google Drive file ID
         url = f"https://drive.google.com/uc?id={file_id}"
-        print("Downloading model from Google Drive...")
+        st.info("Downloading model from Google Drive...")
         gdown.download(url, model_path, quiet=False)
     return model_path
-    
+
+# Load model
 model_path = download_model()
-model = load_model("models/cnn_model.h5")
-app.config['UPLOAD_FOLDER'] = 'uploads'
+model = load_model(model_path)
 
-
-def preprocess_image(path):
-    img = load_img(path, target_size=(128, 128))
+# Image preprocessing
+def preprocess_image(img):
+    img = img.resize((128, 128))
     img = img_to_array(img)
     img = img / 255.0
     img = np.expand_dims(img, axis=0)
     return img
 
-@app.route('/')
-def index():
-    return render_template("index.html", random=random)
+# Streamlit UI
+st.set_page_config(page_title="Forgery Detection App", layout="centered")
+st.title("📝 Forgery Detection in ID Cards and Signatures")
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    file = request.files['file']
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(filepath)
+st.write("Upload an image of an ID card or signature to check if it is **Original** or **Forged**.")
 
-    img = preprocess_image(filepath)
-    prediction = model.predict(img)
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    # Display uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Preprocess and predict
+    processed_image = preprocess_image(image)
+    prediction = model.predict(processed_image)
     label = np.argmax(prediction)
     confidence = float(np.max(prediction)) * 100
     result = "Original" if label == 0 else "Forged"
 
-    return render_template('result.html', result=result, confidence=round(confidence, 2), filename=file.filename)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    st.subheader("Prediction Result:")
+    st.success(f"**{result}** (Confidence: {confidence:.2f}%)")
